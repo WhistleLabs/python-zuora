@@ -249,6 +249,25 @@ class Zuora:
         SessionHeader.append(session)
         self.client.set_options(soapheaders=[SessionHeader])
 
+    def query_all(self, query_string):
+        """
+        Stitch together records from query(), query_more() results as needed.
+
+        :param string query_string: ZQL query string
+        :returns: the API response
+        """
+        current_response = self.query(query_string)
+        all_records = current_response.records
+        done = getattr(current_response, 'done')
+        while not done:
+            query_locator = getattr(current_response, 'queryLocator')
+            current_response = self.query_more(query_locator)
+            all_records += current_response.records
+            done = getattr(current_response, 'done')
+        response = current_response
+        response.records = all_records
+        return response
+
     def query(self, query_string):
         """
         Pass the zosql querystring into the query() SOAP method
@@ -516,7 +535,7 @@ class Zuora:
                 WHERE Id = '%s'
                 """ % (fields, account_id)
 
-        response = self.query(qs)
+        response = self.query_all(qs)
         if getattr(response, "records") and len(response.records) > 0:
             zAccount = response.records[0]
             return zAccount
@@ -547,7 +566,7 @@ class Zuora:
             WHERE %s
             """  % " AND ".join(qs_filter)
 
-        response = self.query(qs)
+        response = self.query_all(qs)
         if getattr(response, "records") and len(response.records) > 0:
             zContact = response.records[0]
             return zContact
@@ -573,7 +592,7 @@ class Zuora:
             WHERE Id = '%s'
             """ % invoice_id
 
-        response = self.query(qs)
+        response = self.query_all(qs)
         if getattr(response, "records") and len(response.records) > 0:
             zInvoice = response.records[0]
             return zInvoice
@@ -595,7 +614,7 @@ class Zuora:
             WHERE Id = '%s'
             """ % invoice_id
 
-        response = self.query(qs)
+        response = self.query_all(qs)
         if getattr(response, "records") and len(response.records) > 0:
             zInvoice = response.records[0]
             return zInvoice.Body
@@ -634,7 +653,7 @@ class Zuora:
                 WHERE %s
                 """ % " AND ".join(qs_filter)
 
-            response = self.query(qs)
+            response = self.query_all(qs)
             zInvoices = response.records
 
             # Return the Match
@@ -677,7 +696,7 @@ class Zuora:
                 WHERE %s
                 """ % " AND ".join(qs_filter)
 
-            response = self.query(qs)
+            response = self.query_all(qs)
             zRecords = response.records
 
             # Return the Match
@@ -719,7 +738,7 @@ class Zuora:
             WHERE Id = '%s'
             """ % invoice_payment_id
 
-        response = self.query(qs)
+        response = self.query_all(qs)
         if getattr(response, "records") and len(response.records) > 0:
             zInvoicePayment = response.records[0]
             return zInvoicePayment
@@ -750,7 +769,7 @@ class Zuora:
                 FROM InvoicePayment
                 WHERE %s
                 """ % " AND ".join(qs_filter)
-            response = self.query(qs)
+            response = self.query_all(qs)
             zInvoicePayments = response.records
 
             # Return the Match
@@ -781,7 +800,7 @@ class Zuora:
             WHERE Id = '%s'
             """ % payment_id
 
-        response = self.query(qs)
+        response = self.query_all(qs)
         if getattr(response, "records") and len(response.records) > 0:
             zPayment = response.records[0]
             return zPayment
@@ -819,7 +838,7 @@ class Zuora:
                 WHERE %s
                 """ % " AND ".join(qs_filter)
 
-            response = self.query(qs)
+            response = self.query_all(qs)
             zPayments = response.records
 
             # Return the Match
@@ -849,7 +868,7 @@ class Zuora:
             WHERE Id = '%s'
             """ % payment_method_id
 
-        response = self.query(qs)
+        response = self.query_all(qs)
         if getattr(response, "records") and len(response.records) > 0:
             zPaymentMethod = response.records[0]
             return zPaymentMethod
@@ -881,7 +900,7 @@ class Zuora:
                 WHERE AccountNumber = '%s' or AccountNumber = 'A-%s'
                 """ % (account_number, account_number)
 
-            response = self.query(qs)
+            response = self.query_all(qs)
             if getattr(response, "records") and len(response.records) > 0:
                 zAccount = response.records[0]
                 # Check for a default payment method
@@ -918,7 +937,7 @@ class Zuora:
                 WHERE %s
                 """ % " AND ".join(qs_filter)
 
-            response = self.query(qs)
+            response = self.query_all(qs)
             zPaymentMethods = response.records
 
             # Return the Match
@@ -953,7 +972,7 @@ class Zuora:
         if qs_filter:
             qs += " WHERE %s" % qs_filter
 
-        response = self.query(qs)
+        response = self.query_all(qs)
         try:
             zProducts = response.records
             return zProducts
@@ -1008,7 +1027,7 @@ class Zuora:
                 qs_filter = " OR ".join(id_filter_list)
 
         qs += " WHERE %s" % qs_filter
-        response = self.query(qs)
+        response = self.query_all(qs)
         try:
             return response.records
         except:
@@ -1064,7 +1083,7 @@ class Zuora:
 
         qs += " WHERE %s" % qs_filter
 
-        response = self.query(qs)
+        response = self.query_all(qs)
         try:
             zProductRatePlans = response.records
             return zProductRatePlans
@@ -1116,7 +1135,7 @@ class Zuora:
 
         qs += " WHERE %s" % qs_filter
 
-        response = self.query(qs)
+        response = self.query_all(qs)
         try:
             return response.records
         except:
@@ -1158,7 +1177,7 @@ class Zuora:
 
         qs += " WHERE %s" % qs_filter
 
-        response = self.query(qs)
+        response = self.query_all(qs)
         try:
             zProductRatePlanChargeTiers = response.records
             return zProductRatePlanChargeTiers
@@ -1458,7 +1477,7 @@ class Zuora:
         if qs_filter:
             qs += "WHERE %s" % " AND ".join(qs_filter)
 
-        response = self.query(qs)
+        response = self.query_all(qs)
         zRecords = response.records
 
         # Return the Match
@@ -1528,7 +1547,7 @@ class Zuora:
         if qs_filter:
             qs += "WHERE %s" % " AND ".join(qs_filter)
 
-        response = self.query(qs)
+        response = self.query_all(qs)
         zRecords = response.records
 
         # Return the Match
