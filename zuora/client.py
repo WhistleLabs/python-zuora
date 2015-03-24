@@ -252,6 +252,7 @@ class Zuora:
     def query_all(self, query_string):
         """
         Stitch together records from query(), query_more() results as needed.
+        https://knowledgecenter.zuora.com/BC_Developers/SOAP_API/M_Zuora_Object_Query_Language
 
         :param string query_string: ZQL query string
         :returns: the API response
@@ -543,17 +544,75 @@ class Zuora:
             raise DoesNotExist("Unable to find Account for User ID %s"\
                             % user_id)
 
-    def get_contact(self, email=None, account_id=None):
+    def get_accounts(self, account_id_list=None, account_id=None, status=None, created_start=None, created_end=None,
+                     id_only=False):
         """
-        Checks to see if the loaded user has a contact
+        Gets the Accounts matching criteria.
+        Note: If account_id_list provided, all other criteria are ignored.
+        """
+        if id_only:
+            fields = 'Id'
+        else:
+            fields = """Id, AccountNumber, AutoPay, Balance, CreatedDate, DefaultPaymentMethodId,
+                        PaymentGateway, Name, Status, UpdatedDate"""
+
+        # Defaults
+        qs_filter = []
+
+        if account_id_list:
+            qs_filter.append("%s" % " OR ".join(["Id = '%s'" % account_id for account_id in account_id_list]))
+        else:
+            if account_id:
+                qs_filter.append("Id = '%s'" % account_id)
+            if status:
+                qs_filter.append("Status = '%s'" % status)
+            if created_start:
+                qs_filter.append("CreatedDate >= '%s'" % created_start)
+            if created_end:
+                qs_filter.append("CreatedDate &lt;= '%s'" % created_end)
+
+        if qs_filter:
+            qs = """
+                SELECT
+                    %s
+                FROM Account
+                WHERE %s
+                """ % (fields, " AND ".join(qs_filter))
+        else:
+            qs = """
+                SELECT
+                    %s
+                FROM Account
+                """ % fields
+
+        response = self.query_all(qs)
+
+        if getattr(response, "records") and len(response.records) > 0:
+            zAccount = response.records
+            return zAccount
+        else:
+            raise DoesNotExist("Unable to find Accounts")
+
+    def get_contacts(self, email_list=None, account_id_list=None, email=None, account_id=None,
+                     first_name=None, last_name=None):
+        """
+        Checks to see if the loaded users have a contact
         """
         qs_filter = []
 
-        if account_id:
-            qs_filter.append("AccountId = '%s'" % account_id)
-
-        if email:
-            qs_filter.append("PersonalEmail = '%s'" % email)
+        if email_list:
+            qs_filter.append("%s" % " OR ".join(["PersonalEmail = '%s'" % email for email in email_list]))
+        elif account_id_list:
+            qs_filter.append("%s" % " OR ".join(["AccountId = '%s'" % account_id for account_id in account_id_list]))
+        else:
+            if account_id:
+                qs_filter.append("AccountId = '%s'" % account_id)
+            if email:
+                qs_filter.append("PersonalEmail = '%s'" % email)
+            if first_name:
+                qs_filter.append("FirstName = '%s'" % first_name)
+            if last_name:
+                qs_filter.append("LastName = '%s'" % last_name)
 
         qs = """
             SELECT
@@ -568,7 +627,7 @@ class Zuora:
 
         response = self.query_all(qs)
         if getattr(response, "records") and len(response.records) > 0:
-            zContact = response.records[0]
+            zContact = response.records
             return zContact
         else:
             raise DoesNotExist("Unable to find Contact for Email %s"\
@@ -944,30 +1003,24 @@ class Zuora:
             return zPaymentMethods
         return []
 
-    def get_products(self, product_id=None, shortcodes=None):
+    def get_products(self, product_id=None):
         """
         Gets the Product.
 
         :param str product_id: ProductID
-        :param list shortcodes: List of shortcode strings
         """
         qs_filter = None
 
         qs = """
             SELECT
                 Description, EffectiveEndDate, EffectiveStartDate,
-                Id, SKU, Name, ShortCode__c
+                Id, SKU, Name
             FROM Product
             """
 
         # If we're looking for one specific product
         if product_id:
             qs_filter = "Id = '%s'" % product_id
-        # If we're pulling multiple products by their shortcodes
-        elif shortcodes:
-            qs_filter_list = ["ShortCode__c = '%s'" % code
-                                for code in shortcodes]
-            qs_filter = " OR ".join(qs_filter_list)
 
         if qs_filter:
             qs += " WHERE %s" % qs_filter
@@ -1017,6 +1070,8 @@ class Zuora:
         # If only querying with one rate plan id
         if rate_plan_id:
             qs_filter = where_id_string % rate_plan_id
+        elif product_rate_plan_charge_id:
+            qs_filter = "ProductRatePlanChargeId = '%s'" % product_rate_plan_charge_id
         # Otherwise we're querying with multiple rate plan id's
         else:
             qs_filter = None
@@ -1048,10 +1103,8 @@ class Zuora:
         """
         qs = """
             SELECT
-                ActivityLevel__c, AgeGroup__c,
                 Description, EffectiveEndDate, EffectiveStartDate,
-                Gender__c, Id, Name,
-                Priority__c, ProductId, Site__c, Term__c
+                Id, Name, ProductId
             FROM ProductRatePlan
             """
 
@@ -1081,7 +1134,8 @@ class Zuora:
                 else:
                     qs_filter = date_where
 
-        qs += " WHERE %s" % qs_filter
+        if qs_filter:
+            qs += " WHERE %s" % qs_filter
 
         response = self.query_all(qs)
         try:
@@ -1105,14 +1159,13 @@ class Zuora:
             SELECT
                 AccountingCode, BillCycleDay, BillCycleType, BillingPeriod,
                 BillingPeriodAlignment, ChargeModel, ChargeType,
-                CustomImageURL__c, DefaultQuantity, Description,
-                ExclusiveOfferFlag__c,
-                HiddenBenefitText__c, Id,  IncludedUnits, MaxQuantity,
+                DefaultQuantity, Description,
+                Id, IncludedUnits, MaxQuantity,
                 MinQuantity, Name, NumberOfPeriod, OverageCalculationOption,
                 OverageUnusedUnitsCreditOption,
                 PriceIncreasePercentage, ProductRatePlanId,
-                RevRecCode, RevRecTriggerCondition, ShortCode__c,
-                SmoothingModel, SortOrder__c, SpecificBillingPeriod,
+                RevRecCode, RevRecTriggerCondition,
+                SmoothingModel, SpecificBillingPeriod,
                 TriggerEvent, UOM, UpToPeriods,
                 UseDiscountSpecificAccountingCode
             FROM ProductRatePlanCharge
@@ -1133,7 +1186,8 @@ class Zuora:
                 # Combine the product rate plan ids for the WHERE clause
                 qs_filter = " OR ".join(id_filter_list)
 
-        qs += " WHERE %s" % qs_filter
+        if qs_filter:
+            qs += " WHERE %s" % qs_filter
 
         response = self.query_all(qs)
         try:
@@ -1447,7 +1501,8 @@ class Zuora:
         # Run Aggregates
         return pricing_dict
 
-    def get_rate_plans(self, product_rate_plan_id=None, subscription_id=None):
+    def get_rate_plans(self, product_rate_plan_id_list=None, subscription_id_list=None,
+                       product_rate_plan_id=None, subscription_id=None):
         """
         Gets the RatePlan matching criteria.
 
@@ -1458,11 +1513,15 @@ class Zuora:
         # Defaults
         qs_filter = []
 
-        if product_rate_plan_id:
-            qs_filter.append("ProductRatePlanId = '%s'" % product_rate_plan_id)
-
-        if subscription_id:
-            qs_filter.append("SubscriptionId = '%s'" % subscription_id)
+        if product_rate_plan_id_list:
+            qs_filter.append("%s" % " OR ".join(["ProductRatePlanId = '%s'" % i for i in product_rate_plan_id_list]))
+        elif subscription_id_list:
+            qs_filter.append("%s" % " OR ".join(["SubscriptionId = '%s'" % i for i in subscription_id_list]))
+        else:
+            if product_rate_plan_id:
+                qs_filter.append("ProductRatePlanId = '%s'" % product_rate_plan_id)
+            if subscription_id:
+                qs_filter.append("SubscriptionId = '%s'" % subscription_id)
 
         # Build Query
         qs = """
@@ -1483,7 +1542,8 @@ class Zuora:
         # Return the Match
         return zRecords
 
-    def get_subscriptions(self, subscription_id=None, account_id=None,
+    def get_subscriptions(self, subscription_id_list=None, account_id_list=None,
+                          subscription_id=None, account_id=None,
                           auto_renew=None, status=None, term_type=None,
                           term_end_date=None, term_start_date=None,
                           subscription_number=None):
@@ -1504,29 +1564,27 @@ class Zuora:
         # Defaults
         qs_filter = []
 
-        if subscription_id:
-            qs_filter.append("Id = '%s'" % subscription_id)
-
-        if subscription_number:
-            qs_filter.append("Name = '%s'" % subscription_number)
-
-        if account_id:
-            qs_filter.append("AccountId = '%s'" % account_id)
-
-        if auto_renew:
-            qs_filter.append("AutoRenew = %s" % auto_renew.lower())
-
-        if status:
-            qs_filter.append("Status = '%s'" % status)
-
-        if term_type:
-            qs_filter.append("TermType = '%s'" % term_type)
-
-        if term_end_date:
-            qs_filter.append("TermEndDate = '%s'" % term_end_date)
-
-        if term_start_date:
-            qs_filter.append("TermStartDate = '%s'" % term_start_date)
+        if subscription_id_list:
+            qs_filter.append("%s" % " OR ".join(["Id = '%s'" % i for i in subscription_id_list]))
+        elif account_id_list:
+            qs_filter.append("%s" % " OR ".join(["AccountId = '%s'" % i for i in account_id_list]))
+        else:
+            if subscription_id:
+                qs_filter.append("Id = '%s'" % subscription_id)
+            if subscription_number:
+                qs_filter.append("Name = '%s'" % subscription_number)
+            if account_id:
+                qs_filter.append("AccountId = '%s'" % account_id)
+            if auto_renew:
+                qs_filter.append("AutoRenew = %s" % auto_renew.lower())
+            if status:
+                qs_filter.append("Status = '%s'" % status)
+            if term_type:
+                qs_filter.append("TermType = '%s'" % term_type)
+            if term_end_date:
+                qs_filter.append("TermEndDate = '%s'" % term_end_date)
+            if term_start_date:
+                qs_filter.append("TermStartDate = '%s'" % term_start_date)
 
         # Build Query
         qs = """
