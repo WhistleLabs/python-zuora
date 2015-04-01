@@ -544,17 +544,13 @@ class Zuora:
             raise DoesNotExist("Unable to find Account for User ID %s"\
                             % user_id)
 
-    def get_accounts(self, account_id_list=None, account_id=None, status=None, created_start=None, created_end=None,
-                     id_only=False):
+    def get_accounts(self, account_id_list=None, account_id=None, status=None, created_start=None, created_end=None):
         """
         Gets the Accounts matching criteria.
         Note: If account_id_list provided, all other criteria are ignored.
         """
-        if id_only:
-            fields = 'Id'
-        else:
-            fields = """Id, AccountNumber, AutoPay, Balance, CreatedDate, DefaultPaymentMethodId,
-                        PaymentGateway, Name, Status, UpdatedDate"""
+        fields = """Id, AccountNumber, AutoPay, Balance, CreatedDate, DefaultPaymentMethodId,
+                    PaymentGateway, Name, Status, UpdatedDate"""
 
         # Defaults
         qs_filter = []
