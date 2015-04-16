@@ -544,7 +544,8 @@ class Zuora:
             raise DoesNotExist("Unable to find Account for User ID %s"\
                             % user_id)
 
-    def get_accounts(self, account_id_list=None, account_id=None, status=None, created_start=None, created_end=None):
+    def get_accounts(self, account_number_list=None, account_id_list=None,
+                     account_id=None, status=None, created_start=None, created_end=None):
         """
         Gets the Accounts matching criteria.
         Note: If account_id_list provided, all other criteria are ignored.
@@ -555,7 +556,9 @@ class Zuora:
         # Defaults
         qs_filter = []
 
-        if account_id_list:
+        if account_number_list:
+            qs_filter.append("%s" % " OR ".join(["AccountNumber = '%s'" % number for number in account_number_list]))
+        elif account_id_list:
             qs_filter.append("%s" % " OR ".join(["Id = '%s'" % account_id for account_id in account_id_list]))
         else:
             if account_id:
