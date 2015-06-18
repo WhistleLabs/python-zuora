@@ -1595,7 +1595,7 @@ class Zuora:
                 AccountId, AutoRenew,
                 CancelledDate, ContractAcceptanceDate,
                 ContractEffectiveDate,
-                CreatedById, CreatedDate, InitialTerm,
+                CreatedById, CreatedDate, DeviceID__c, InitialTerm,
                 IsInvoiceSeparate, Name, Notes, OriginalCreatedDate,
                 OriginalId, PreviousSubscriptionId,
                 RenewalTerm, ServiceActivationDate, Status,
