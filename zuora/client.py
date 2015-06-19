@@ -870,7 +870,7 @@ class Zuora:
             raise DoesNotExist("Unable to find Payment for Id %s"\
                             % payment_id)
 
-    def get_payments(self, account_id=None):
+    def get_payments(self, account_id_list=None, account_id=None):
         """
         Gets the Payments matching criteria.
 
@@ -880,21 +880,22 @@ class Zuora:
         # Defaults
         qs_filter = []
 
-        if account_id:
+        if account_id_list:
+            qs_filter.append("%s" % " OR ".join(["AccountId = '%s'" % i for i in account_id_list]))
+        elif account_id:
             qs_filter.append("AccountId = '%s'" % account_id)
 
         if qs_filter:
             qs = """
                 SELECT
-                    AccountID, AccountingCode, Amount,
-                    AppliedCreditBalanceAmount, AuthTransactionId,
+                    AccountID, Amount,
                     BankIdentificationNumber, CancelledOn, Comment,
-                    CreatedById, CreatedDate, EffectiveDate, GatewayOrderId,
-                    GatewayResponse, GatewayResponseCode, GatewayState,
+                    CreatedById, CreatedDate, EffectiveDate,
+                    Gateway, GatewayOrderId, GatewayResponse, GatewayResponseCode, GatewayState,
+                    Id,
                     MarkedForSubmissionOn,
-                    PaymentMethodID, PaymentNumber, ReferenceId, RefundAmount,
-                    SecondPaymentReferenceId, SettledOn, SoftDescriptor,
-                    Status, SubmittedOn, TransferredToAccounting,
+                    PaymentMethodID, ReferenceId, RefundAmount,
+                    Status, SubmittedOn,
                     Type, UpdatedById, UpdatedDate
                 FROM Payment
                 WHERE %s
