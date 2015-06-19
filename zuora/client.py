@@ -938,7 +938,7 @@ class Zuora:
             raise DoesNotExist("Unable to find Payment Method for %s. %s"\
                             % (payment_method_id, response))
 
-    def get_payment_methods(self, account_id=None, account_number=None,
+    def get_payment_methods(self, account_id_list=None, account_id=None, account_number=None,
                             email=None, phone=None):
         """
         Gets the Payment Methods matching criteria.
@@ -953,48 +953,53 @@ class Zuora:
         # Defaults
         qs_filter = []
 
-        # Account Number
-        if account_number:
-            qs = """
-                SELECT
-                    DefaultPaymentMethodId
-                FROM Account
-                WHERE AccountNumber = '%s' or AccountNumber = 'A-%s'
-                """ % (account_number, account_number)
+        if account_id_list:
+            qs_filter.append("%s" % " OR ".join(["AccountId = '%s'" % i for i in account_id_list]))
+        else:
 
-            response = self.query_all(qs)
-            if getattr(response, "records") and len(response.records) > 0:
-                zAccount = response.records[0]
-                # Check for a default payment method
-                try:
-                    payment_method_id = zAccount.DefaultPaymentMethodId
-                except:
-                    return []
+            # Account Number
+            if account_number:
+                qs = """
+                    SELECT
+                        DefaultPaymentMethodId
+                    FROM Account
+                    WHERE AccountNumber = '%s' or AccountNumber = 'A-%s'
+                    """ % (account_number, account_number)
 
-                # Return as a List
-                return [self.get_payment_method(payment_method_id)]
+                response = self.query_all(qs)
+                if getattr(response, "records") and len(response.records) > 0:
+                    zAccount = response.records[0]
+                    # Check for a default payment method
+                    try:
+                        payment_method_id = zAccount.DefaultPaymentMethodId
+                    except:
+                        return []
 
-        if account_id:
-            qs_filter.append("AccountId = '%s'" % account_id)
+                    # Return as a List
+                    return [self.get_payment_method(payment_method_id)]
 
-        if email:
-            qs_filter.append("Email = '%s'" % email)
+            if account_id:
+                qs_filter.append("AccountId = '%s'" % account_id)
 
-        if phone:
-            qs_filter.append("Phone = '%s'" % phone)
+            if email:
+                qs_filter.append("Email = '%s'" % email)
+
+            if phone:
+                qs_filter.append("Phone = '%s'" % phone)
 
         if qs_filter:
             qs = """
                 SELECT
                     AccountId, Active,
                     CreatedById, CreatedDate,
-                    CreditCardAddress1, CreditCardAddress2,
-                    CreditCardCity, CreditCardCountry,
                     CreditCardExpirationMonth, CreditCardExpirationYear,
                     CreditCardHolderName, CreditCardMaskNumber,
-                    CreditCardPostalCode, CreditCardState, CreditCardType,
-                    Email, Name, PaypalBaid, PaypalEmail,
-                    PaypalPreapprovalKey, PaypalType, Phone, Type
+                    CreditCardType, Id,
+                    LastFailedSaleTransactionDate, LastTransactionDateTime, LastTransactionStatus,
+                    MaxConsecutivePaymentFailures, Name, NumConsecutiveFailures,
+                    PaymentMethodStatus, PaymentRetryWindow,
+                    TotalNumberOfErrorPayments, TotalNumberOfProcessedPayments,
+                    Type, UpdatedById, UpdatedDate
                 FROM PaymentMethod
                 WHERE %s
                 """ % " AND ".join(qs_filter)
