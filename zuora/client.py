@@ -593,21 +593,25 @@ class Zuora:
             raise DoesNotExist("Unable to find Accounts")
 
     def get_contacts(self, email_list=None, account_id_list=None, email=None, account_id=None,
-                     first_name=None, last_name=None):
+                     first_name=None, last_name=None, email_type='Personal'):
         """
         Checks to see if the loaded users have a contact
         """
         qs_filter = []
 
+        if email_type not in ['Personal', 'Work']:
+            SyntaxError('Only Work or Personal emails are supported')
+
         if email_list:
-            qs_filter.append("%s" % " OR ".join(["PersonalEmail = '%s'" % email for email in email_list]))
+            qs_filter.append("%s" % " OR ".join(["{type}Email = '{email}'".format(type=email_type, email=email)
+                                                 for email in email_list]))
         elif account_id_list:
             qs_filter.append("%s" % " OR ".join(["AccountId = '%s'" % account_id for account_id in account_id_list]))
         else:
             if account_id:
                 qs_filter.append("AccountId = '%s'" % account_id)
             if email:
-                qs_filter.append("PersonalEmail = '%s'" % email)
+                qs_filter.append("{type}Email = '{email}'".format(type=email_type, email=email))
             if first_name:
                 qs_filter.append("FirstName = '%s'" % first_name)
             if last_name:
