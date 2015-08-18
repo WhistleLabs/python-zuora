@@ -545,13 +545,16 @@ class Zuora:
                             % user_id)
 
     def get_accounts(self, account_number_list=None, account_id_list=None,
-                     account_id=None, status=None, created_start=None, created_end=None):
+                     account_id=None, status=None, created_start=None, created_end=None,
+                     additional_fields_str='GUID__c, Notes'):
         """
         Gets the Accounts matching criteria.
         Note: If account_id_list provided, all other criteria are ignored.
         """
         fields = """Id, AccountNumber, AutoPay, Balance, CreatedDate, DefaultPaymentMethodId,
                     PaymentGateway, Name, Status, UpdatedDate"""
+        if additional_fields_str:
+            fields += ', {}'.format(additional_fields_str)
 
         # Defaults
         qs_filter = []
