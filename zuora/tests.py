@@ -94,7 +94,7 @@ class TestZuora(object):
         response = mock.Mock()
         response.records = [1]
         z.query.return_value = response
-        z.get_account(user_id=42)
+        z.get_account(user_guid=42)
         assert z.query.call_count == 1
 
     def test_get_contact_query_called(self):

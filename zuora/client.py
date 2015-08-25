@@ -511,7 +511,7 @@ class Zuora:
             raise ZuoraException(
                 "Unknown Error updating Account. %s" % response)
 
-    def get_account(self, user_id, account_id=None, id_only=False):
+    def get_account(self, user_guid=None, account_id=None, id_only=False):
         """
         Checks to see if the loaded user has an account
         """
@@ -526,13 +526,13 @@ class Zuora:
                 SELECT
                     %s
                 FROM Account
-                WHERE AccountNumber = '%s' or AccountNumber = 'A-%s'
-                """ % (fields, user_id, user_id)
+                WHERE GUID__c = '%s'
+                """ % (fields, user_guid)
         else:
             qs = """
                 SELECT
                     %s
-                FROM Account
+                FROM Accountb
                 WHERE Id = '%s'
                 """ % (fields, account_id)
 
@@ -541,8 +541,8 @@ class Zuora:
             zAccount = response.records[0]
             return zAccount
         else:
-            raise DoesNotExist("Unable to find Account for User ID %s"\
-                            % user_id)
+            raise DoesNotExist("Unable to find Account for User GUID %s and AccountId %s"\
+                            % (user_guid, account_id))
 
     def get_accounts(self, account_number_list=None, account_id_list=None,
                      account_id=None, status=None, created_start=None, created_end=None,
