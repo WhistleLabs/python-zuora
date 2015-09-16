@@ -37,6 +37,7 @@ log_suds = logging.getLogger('suds')
 log_suds.propagate = False
 
 SOAP_TIMESTAMP = '%Y-%m-%dT%H:%M:%S-06:00'
+UTC_TIMESTAMP = '%Y-%m-%dT%H:%M:%S+00:00'
 
 
 from rest_client import RestClient
@@ -443,6 +444,33 @@ class Zuora:
 
         return payment_method
 
+    def transfer_subscription(self, subscription_id, destination_account_id, name='MergeAccountsByGuid'):
+
+        cur_sub = self.get_subscription(subscription_id)
+
+        # Make Amendment
+        zAmendment = self.client.factory.create('ns2:Amendment')
+        effective_date = datetime.utcnow().strftime(UTC_TIMESTAMP)
+        zAmendment.EffectiveDate = effective_date
+        zAmendment.Name = "{} {}".format(name, effective_date)
+
+        zAmendment.SubscriptionId = subscription_id
+        zAmendment.DestinationAccountId = destination_account_id
+        zAmendment.DestinationInvoiceOwnerId = destination_account_id
+        zAmendment.Type = "OwnerTransfer"
+        zAmendment.Description = "Transfer from account {c} to {d} based on GUID".format(c=cur_sub.AccountId,
+                                                                                         d=destination_account_id)
+        zAmendment.Status = "Completed"
+
+        # Create Amendment
+        response = self.create(zAmendment)
+        if not isinstance(response, list) or not response[0].Success:
+            raise ZuoraException(
+                "Unknown Error creating Amendment. %s" % response)
+        zAmendment.Id = response[0].Id
+
+        return zAmendment
+
     def create_active_account(self, zAccount=None, zContact=None,
                               payment_method_id=None, user=None,
                               billing_address=None, shipping_address=None,
@@ -532,7 +560,7 @@ class Zuora:
             qs = """
                 SELECT
                     %s
-                FROM Accountb
+                FROM Account
                 WHERE Id = '%s'
                 """ % (fields, account_id)
 
@@ -543,6 +571,31 @@ class Zuora:
         else:
             raise DoesNotExist("Unable to find Account for User GUID %s and AccountId %s"\
                             % (user_guid, account_id))
+
+    def get_subscription(self, subscription_id=None):
+        """
+        Checks to see if the loaded user has an account
+        """
+
+        fields = """AccountId, AutoRenew, CancelledDate, ContractAcceptanceDate, ContractEffectiveDate,
+                    CreatedById, CreatedDate, DeviceID__c, InitialTerm, IsInvoiceSeparate, Name, Notes,
+                    OriginalCreatedDate, OriginalId, PreviousSubscriptionId, RenewalTerm,
+                    ServiceActivationDate, Status, SubscriptionEndDate, SubscriptionStartDate,
+                    TermEndDate, TermStartDate, TermType, UpdatedById, UpdatedDate, Version"""
+
+        qs = """
+            SELECT
+                %s
+            FROM Subscription
+            WHERE Id = '%s'
+            """ % (fields, subscription_id)
+
+        response = self.query_all(qs)
+        if getattr(response, "records") and len(response.records) > 0:
+            zSubscription = response.records[0]
+            return zSubscription
+        else:
+            raise DoesNotExist("Unable to find Subscription {s}".format(subscription_id))
 
     def get_accounts(self, account_number_list=None, account_id_list=None,
                      account_id=None, status=None, created_start=None, created_end=None,
@@ -2019,6 +2072,42 @@ class Zuora:
                                     subscription_id,
                                     name_prepend="Remove Product Amendment",
                                     amendment_type='RemoveProduct')
+
+        # Make Rate Plan
+        zRatePlan = self.client.factory.create('ns0:RatePlan')
+        zRatePlan.AmendmentType = "RemoveProduct"
+        zRatePlan.AmendmentId = zAmendment.Id
+        zRatePlan.AmendmentSubscriptionRatePlanId = rate_plan_id
+        response = self.create(zRatePlan)
+        if not isinstance(response, list) or not response[0].Success:
+            raise ZuoraException(
+                "Unknown Error creating RatePlan. %s" % response)
+
+        # Update the product amendment
+        response = self.update_product_amendment(effective_date, zAmendment)
+
+        return response
+
+    def change_subscription_owner(self, subscription_id, destination_account_id):
+        """
+        Use Amendment to make changes to a subscription. For example, if you
+        wish to change the terms and conditions of a subscription, you would
+        use an Amendment.
+
+        :param str subscription_id: The identification number for the\
+            subscription that is being amended.
+        :param str rate_plan_id: RatePlanID
+
+        :returns: response
+        """
+        effective_date = datetime.now().strftime(SOAP_TIMESTAMP)
+
+        # Create the product amendment removal
+        zAmendment = self.create_product_amendment(
+            effective_date,
+            subscription_id,
+            name_prepend="Remove Product Amendment",
+            amendment_type='RemoveProduct')
 
         # Make Rate Plan
         zRatePlan = self.client.factory.create('ns0:RatePlan')
