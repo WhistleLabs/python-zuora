@@ -1676,15 +1676,21 @@ class Zuora:
         # Return the Match
         return zRecords
     
-    def set_default_payment_method_id(self, account_id, payment_method_id,
-                                      auto_pay=None):
+    def setup_default_payment_method(self, account_id, payment_method_id=None, auto_pay=None):
         # Update the default payment method on the account
-        account_dict = {'DefaultPaymentMethodId': payment_method_id}
-        if auto_pay == True:
-            account_dict['AutoPay'] = True
-        elif auto_pay == False:
-            account_dict['AutoPay'] = False
-        self.update_account(account_id, account_dict)
+        account_dict = dict()
+
+        if payment_method_id:
+            account_dict = {'DefaultPaymentMethodId': payment_method_id}
+
+        if auto_pay is not None:
+            if auto_pay:
+                account_dict['AutoPay'] = True
+            elif auto_pay:
+                account_dict['AutoPay'] = False
+
+        if account_dict:
+            self.update_account(account_id, account_dict)
 
     def gateway_confirm(self, account, user, gateway_name,
                         payment_method):
