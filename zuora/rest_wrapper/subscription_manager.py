@@ -41,8 +41,11 @@ class SubscriptionManager(RequestBase):
     
     @rest_client_reconnect
     def cancel_subscription(self, subsKey, jsonParams={}):
-        jsonParams.setdefault('cancellationPolicy',
-                              self.zuora_config.default_cancellation_policy)
+        if 'cancellationEffectiveDate' in jsonParams:
+            jsonParams['cancellationPolicy'] = 'SpecificDate'
+        else:
+            jsonParams.setdefault('cancellationPolicy',
+                                  self.zuora_config.default_cancellation_policy)
         fullUrl = self.zuora_config.base_url + 'subscriptions/' + subsKey + \
                   '/cancel'
         data = json.dumps(jsonParams)
