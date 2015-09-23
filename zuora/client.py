@@ -539,7 +539,7 @@ class Zuora:
             raise ZuoraException(
                 "Unknown Error updating Account. %s" % response)
 
-    def get_account(self, user_guid=None, account_id=None, id_only=False):
+    def get_account(self, user_guid=None, account_id=None, id_only=False, extra_fields=['GUID__c']):
         """
         Checks to see if the loaded user has an account
         """
@@ -548,6 +548,10 @@ class Zuora:
         else:
             fields = """Id, AccountNumber, AutoPay, Balance, DefaultPaymentMethodId,
                         PaymentGateway, Name, Status, UpdatedDate"""
+
+        if extra_fields:
+            fields += ', '.join(extra_fields)
+
         # If no account id was specified
         if not account_id:
             qs = """
