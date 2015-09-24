@@ -550,6 +550,7 @@ class Zuora:
                         PaymentGateway, Name, Status, UpdatedDate"""
 
         if extra_fields:
+            fields += ', '
             fields += ', '.join(extra_fields)
 
         # If no account id was specified
