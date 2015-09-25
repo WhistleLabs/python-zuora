@@ -15,11 +15,12 @@ from rest_wrapper import (AccountManager, CatalogManager, PaymentMethodManager,
 ## sampleSubsNumber: change to some Subscription Number in your Zuora tenant
 
 #baseUrl = 'https://apisandbox-api.zuora.com/rest/v1/'
+baseUrl = 'https://api.zuora.com/rest/v1/'
 #username = 'rest.user@test.com'
 #password = 'Zuora001!'
 
 #Payment Id of Default Credit Card (specific per tenant)
-hpmCreditCardPaymentMethodId = '2c92c0f93cf64d94013cfe2d20db61a7'
+#hpmCreditCardPaymentMethodId = '2c92c0f93cf64d94013cfe2d20db61a7'
 
 
 class ZuoraConfig(object):
@@ -30,6 +31,7 @@ class ZuoraConfig(object):
         self.headers = {'apiAccessKeyId': zuora_settings['username'],
                         'apiSecretAccessKey': zuora_settings['password'],
                         'Content-Type': 'application/json'}
+        self.base_url = baseUrl
 
 
 class RestClient(object):
