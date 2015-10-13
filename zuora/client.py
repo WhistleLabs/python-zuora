@@ -931,7 +931,7 @@ class Zuora:
             raise DoesNotExist("Unable to find Payment for Id %s"\
                             % payment_id)
 
-    def get_payments(self, account_id_list=None, account_id=None):
+    def get_payments(self, account_id_list=None, account_id=None, payment_method_id_list=None, payment_method_id=None):
         """
         Gets the Payments matching criteria.
 
@@ -943,8 +943,13 @@ class Zuora:
 
         if account_id_list:
             qs_filter.append("%s" % " OR ".join(["AccountId = '%s'" % i for i in account_id_list]))
-        elif account_id:
-            qs_filter.append("AccountId = '%s'" % account_id)
+        elif payment_method_id_list:
+            qs_filter.append("%s" % " OR ".join(["PaymentMethodID = '%s'" % i for i in account_id_list]))
+        else:
+            if account_id:
+                qs_filter.append("AccountId = '%s'" % account_id)
+            if payment_method_id:
+                qs_filter.append("PaymentMethodID = '%s'" % payment_method_id)
 
         if qs_filter:
             qs = """
