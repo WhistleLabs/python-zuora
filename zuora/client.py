@@ -746,7 +746,7 @@ class Zuora:
                             % invoice_id)
 
     def get_invoices(self, account_id=None, minimum_balance=None,
-                     status=None):
+                     status=None, invoice_id_list=None, account_id_list=None):
         """
         Gets the Invoices matching criteria.
 
@@ -758,10 +758,17 @@ class Zuora:
 
         if account_id:
             qs_filter.append("AccountId = '%s'" % account_id)
+
         if minimum_balance:
             qs_filter.append("Balance > '%s'" % minimum_balance)
+
         if status:
             qs_filter.append("Status = '%s'" % status)
+
+        if invoice_id_list:
+            qs_filter.append("%s" % " OR ".join(["Id = '%s'" % i for i in invoice_id_list]))
+        elif account_id_list:
+            qs_filter.append("%s" % " OR ".join(["AccountID = '%s'" % i for i in account_id_list]))
 
         if qs_filter:
             qs = """
@@ -1138,7 +1145,8 @@ class Zuora:
                 Segment, TCV, TriggerDate, TriggerEvent,
                 UnusedUnitsCreditRates, UOM, UpdatedById, UpdatedDate,
                 UpToPeriods, UsageRecordRatingOption,
-                UseDiscountSpecificAccountingCode, Version
+                UseDiscountSpecificAccountingCode, Version,
+                Alacarte__c, SKU__c, FeatureStatus__c, FeatureCode__c
             FROM RatePlanCharge
             """ % pricing_info
         where_id_string = "RatePlanId = '%s'"
@@ -1673,7 +1681,8 @@ class Zuora:
                 RenewalTerm, ServiceActivationDate, Status,
                 SubscriptionEndDate, SubscriptionStartDate,
                 TermEndDate, TermStartDate, TermType,
-                UpdatedById, UpdatedDate, Version
+                UpdatedById, UpdatedDate, Version,
+                Petname__c, KitID__c, TrialDays__c, Type__c, SubscriptionGroup__c, OrderSource__c
             FROM Subscription
             """
 
