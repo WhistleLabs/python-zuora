@@ -1068,6 +1068,8 @@ class Zuora:
                     CreatedById, CreatedDate,
                     CreditCardExpirationMonth, CreditCardExpirationYear,
                     CreditCardHolderName, CreditCardMaskNumber,
+                    CreditCardAddress1, CreditCardAddress2,
+                    CreditCardCity, CreditCardState, CreditCardPostalCode, CreditCardCountry,
                     CreditCardType, Id,
                     LastFailedSaleTransactionDate, LastTransactionDateTime, LastTransactionStatus,
                     MaxConsecutivePaymentFailures, Name, NumConsecutiveFailures,
