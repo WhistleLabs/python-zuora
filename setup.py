@@ -38,6 +38,7 @@ else:
     setupArgs.update({
         'tests_require': ['pytest'],
         'cmdclass': {'test': TestRunner},
+        'install_requires': ['httplib2', 'suds-jurko==0.6'],
         #'install_requires': ['suds >= 0.4', 'python-requests'], Worrying about getting dependency chain right later
         'zip_safe': False,
     })
